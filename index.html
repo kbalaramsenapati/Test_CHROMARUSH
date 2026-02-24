@@ -33,7 +33,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             width: 100%;
             height: 100%;
             background: linear-gradient(180deg, #000000 0%, #0a0a1a 100%);
@@ -44,10 +44,32 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             width: 100%;
             height: 100%;
-            padding: 10px;
+            max-width: 1400px;
+            padding: 20px;
+            gap: 15px;
+        }
+        
+        #title {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 0;
+            background: linear-gradient(90deg, #FF0040, #00F0FF, #FFE000);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        #subtitle {
+            color: #AAAAAA;
+            margin: 0;
+            font-size: 16px;
+            text-align: center;
         }
         
         #canvasContainer {
@@ -56,8 +78,8 @@
             align-items: center;
             justify-content: center;
             width: 100%;
-            max-width: 100%;
             flex: 1;
+            min-height: 0;
         }
         
         #gameCanvas {
@@ -65,146 +87,199 @@
             box-shadow: 0 0 40px rgba(0, 240, 255, 0.5);
             border-radius: 8px;
             cursor: pointer;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+            width: auto;
+            height: auto;
             max-width: 100%;
             max-height: 100%;
         }
         
-        #uiContainer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 15px;
-            pointer-events: none;
-            z-index: 10;
-        }
-        
-        #title {
-            font-size: clamp(24px, 6vw, 48px);
-            font-weight: bold;
-            margin-bottom: 5px;
-            background: linear-gradient(90deg, #FF0040, #00F0FF, #FFE000);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
-            text-align: center;
-        }
-        
-        #subtitle {
-            color: #AAAAAA;
-            margin-bottom: 10px;
-            font-size: clamp(12px, 2.5vw, 16px);
-            text-align: center;
-        }
-        
         #instructions {
-            margin-top: 10px;
             text-align: center;
-            max-width: 900px;
-            padding: 0 10px;
             width: 100%;
+            max-width: 900px;
+            flex-shrink: 0;
         }
         
         #instructions h3 {
-            font-size: clamp(16px, 3vw, 20px);
+            font-size: 20px;
             color: #00F0FF;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         
         .instruction-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
         }
         
         .instruction-box {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
-            padding: 12px;
+            padding: 15px;
             border: 1px solid;
         }
         
         .instruction-box h3 {
             margin-bottom: 5px;
-            font-size: clamp(14px, 2.5vw, 16px);
+            font-size: 16px;
+            font-weight: bold;
         }
         
         .instruction-box p {
             color: #AAAAAA;
-            font-size: clamp(11px, 2vw, 14px);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        /* Desktop/Laptop - Large screens */
+        @media (min-width: 1025px) {
+            #gameWrapper {
+                padding: 30px;
+                gap: 20px;
+            }
+            
+            #title {
+                font-size: 56px;
+            }
+            
+            #subtitle {
+                font-size: 18px;
+            }
+        }
+        
+        /* Tablet Portrait */
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+            #gameWrapper {
+                padding: 20px;
+                gap: 15px;
+            }
+            
+            #title {
+                font-size: 42px;
+            }
+            
+            .instruction-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
+            
+            .instruction-box {
+                padding: 12px;
+            }
+        }
+        
+        /* Tablet Landscape */
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+            #gameWrapper {
+                padding: 15px;
+                gap: 10px;
+            }
+            
+            #title {
+                font-size: 36px;
+            }
+            
+            #subtitle {
+                font-size: 14px;
+            }
+            
+            #instructions h3 {
+                font-size: 18px;
+                margin-bottom: 10px;
+            }
+            
+            .instruction-grid {
+                gap: 10px;
+            }
+            
+            .instruction-box {
+                padding: 10px;
+            }
+            
+            .instruction-box p {
+                font-size: 13px;
+            }
         }
         
         /* Mobile Portrait */
-        @media (max-width: 768px) and (orientation: portrait) {
+        @media (max-width: 767px) and (orientation: portrait) {
             #gameWrapper {
-                padding: 5px;
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            #title {
+                font-size: 32px;
+            }
+            
+            #subtitle {
+                font-size: 14px;
             }
             
             #gameCanvas {
-                border-radius: 0;
+                border-radius: 4px;
             }
             
             .instruction-grid {
                 grid-template-columns: 1fr;
-                gap: 8px;
+                gap: 10px;
             }
             
-            #instructions {
-                margin-top: 5px;
+            #instructions h3 {
+                font-size: 18px;
             }
         }
         
         /* Mobile Landscape */
         @media (max-width: 900px) and (orientation: landscape) {
             #gameWrapper {
-                flex-direction: row;
-                padding: 5px;
-            }
-            
-            #canvasContainer {
-                flex: 1;
-                height: 100%;
-            }
-            
-            #instructions {
-                display: none; /* Hide instructions in landscape to save space */
+                padding: 10px;
+                gap: 8px;
             }
             
             #title {
-                font-size: clamp(20px, 4vw, 32px);
-            }
-        }
-        
-        /* Tablet */
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .instruction-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-        
-        /* Very small screens */
-        @media (max-height: 500px) {
-            #title {
-                font-size: clamp(18px, 4vw, 28px);
-                margin-bottom: 3px;
+                font-size: 24px;
             }
             
             #subtitle {
-                font-size: clamp(10px, 2vw, 14px);
-                margin-bottom: 5px;
+                font-size: 12px;
             }
             
             #instructions {
-                margin-top: 5px;
+                display: none;
+            }
+            
+            #gameCanvas {
+                border-radius: 4px;
+            }
+        }
+        
+        /* Very small height (any device) */
+        @media (max-height: 600px) {
+            #gameWrapper {
+                padding: 10px;
+                gap: 8px;
+            }
+            
+            #title {
+                font-size: 28px;
+            }
+            
+            #subtitle {
+                font-size: 13px;
+            }
+            
+            #instructions h3 {
+                font-size: 16px;
+                margin-bottom: 8px;
             }
             
             .instruction-box {
-                padding: 8px;
+                padding: 10px;
+            }
+            
+            .instruction-box p {
+                font-size: 12px;
             }
         }
         

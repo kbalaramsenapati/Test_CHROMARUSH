@@ -127,6 +127,7 @@ const Game = {
     gateSpawnInterval: 120,
     
     animationId: null,
+    resizeTimeout: null,
     
     // Responsive settings
     canvasScale: { x: 1, y: 1, displayWidth: 800, displayHeight: 600 },
@@ -175,75 +176,111 @@ const Game = {
         const container = document.getElementById('canvasContainer');
         const rect = container.getBoundingClientRect();
         
-        // Base dimensions
+        // Base game dimensions (internal resolution)
         const baseWidth = 800;
         const baseHeight = 600;
         const aspectRatio = baseWidth / baseHeight;
         
-        // Calculate optimal canvas size
-        let canvasWidth = Math.min(rect.width, window.innerWidth);
-        let canvasHeight = canvasWidth / aspectRatio;
+        // Available space
+        const availableWidth = rect.width;
+        const availableHeight = rect.height;
         
-        // Check if height is too large
-        if (canvasHeight > rect.height) {
-            canvasHeight = rect.height;
-            canvasWidth = canvasHeight * aspectRatio;
+        // Calculate dimensions that fit while maintaining aspect ratio
+        let displayWidth, displayHeight;
+        
+        // Try fitting by width first
+        displayWidth = availableWidth;
+        displayHeight = displayWidth / aspectRatio;
+        
+        // If height doesn't fit, fit by height instead
+        if (displayHeight > availableHeight) {
+            displayHeight = availableHeight;
+            displayWidth = displayHeight * aspectRatio;
         }
         
-        // Set canvas display size (CSS pixels)
-        this.canvas.style.width = canvasWidth + 'px';
-        this.canvas.style.height = canvasHeight + 'px';
+        // Ensure we don't exceed the available space (with some padding)
+        const maxWidth = Math.min(availableWidth * 0.98, baseWidth * 1.5);
+        const maxHeight = Math.min(availableHeight * 0.98, baseHeight * 1.5);
         
-        // Set actual canvas resolution (for crisp rendering)
-        const dpr = window.devicePixelRatio || 1;
+        if (displayWidth > maxWidth) {
+            displayWidth = maxWidth;
+            displayHeight = displayWidth / aspectRatio;
+        }
+        
+        if (displayHeight > maxHeight) {
+            displayHeight = maxHeight;
+            displayWidth = displayHeight * aspectRatio;
+        }
+        
+        // Set canvas display size (CSS)
+        this.canvas.style.width = Math.floor(displayWidth) + 'px';
+        this.canvas.style.height = Math.floor(displayHeight) + 'px';
+        
+        // Keep internal resolution consistent for crisp rendering
         this.canvas.width = baseWidth;
         this.canvas.height = baseHeight;
         
-        // Store scale factor for touch/click position calculation
+        // Store scale factor for potential use
         this.canvasScale = {
-            x: baseWidth / canvasWidth,
-            y: baseHeight / canvasHeight,
-            displayWidth: canvasWidth,
-            displayHeight: canvasHeight
+            x: baseWidth / displayWidth,
+            y: baseHeight / displayHeight,
+            displayWidth: displayWidth,
+            displayHeight: displayHeight
         };
         
         // Adjust game elements based on screen size
-        this.adjustGameElements(canvasWidth, canvasHeight);
+        this.adjustGameElements(displayWidth, displayHeight);
         
-        console.log(`Canvas: ${canvasWidth}x${canvasHeight}, DPR: ${dpr}, Scale: ${this.canvasScale.x.toFixed(2)}`);
+        console.log(`Canvas Display: ${Math.floor(displayWidth)}×${Math.floor(displayHeight)}px | Internal: ${baseWidth}×${baseHeight}px`);
     },
     
     adjustGameElements(displayWidth, displayHeight) {
-        // Adjust player size for smaller screens
-        const baseSize = 30;
-        const minScreenDim = Math.min(displayWidth, displayHeight);
+        // Determine screen category
+        const isDesktop = displayWidth >= 1024;
+        const isTablet = displayWidth >= 768 && displayWidth < 1024;
+        const isMobile = displayWidth < 768;
         
-        if (minScreenDim < 400) {
-            this.player.radius = 25;
-            this.fontSize = { hud: 30, menu: 40, gameOver: 50 };
-        } else if (minScreenDim < 600) {
-            this.player.radius = 28;
-            this.fontSize = { hud: 35, menu: 50, gameOver: 55 };
-        } else {
+        // Adjust player size based on screen category
+        if (isDesktop) {
+            // Desktop - standard size
             this.player.radius = 30;
             this.fontSize = { hud: 40, menu: 60, gameOver: 60 };
-        }
-        
-        // Adjust gate spawn interval for mobile (slightly easier)
-        if (displayWidth < 600) {
+            this.mobileMode = false;
+        } else if (isTablet) {
+            // Tablet - slightly smaller
+            this.player.radius = 28;
+            this.fontSize = { hud: 36, menu: 52, gameOver: 56 };
+            this.mobileMode = false;
+        } else if (displayWidth >= 480) {
+            // Large mobile
+            this.player.radius = 26;
+            this.fontSize = { hud: 32, menu: 48, gameOver: 52 };
             this.mobileMode = true;
         } else {
-            this.mobileMode = false;
+            // Small mobile
+            this.player.radius = 24;
+            this.fontSize = { hud: 28, menu: 42, gameOver: 48 };
+            this.mobileMode = true;
         }
+        
+        console.log(`Screen mode: ${isDesktop ? 'Desktop' : isTablet ? 'Tablet' : 'Mobile'} | Player radius: ${this.player.radius}px`);
     },
     
     handleResize() {
-        this.setupResponsiveCanvas();
-        
-        // Force a render
-        if (this.state === 'menu' || this.state === 'gameOver') {
-            this.render();
+        // Clear any pending resize
+        if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
         }
+        
+        // Debounce resize to prevent too many calls
+        this.resizeTimeout = setTimeout(() => {
+            this.setupResponsiveCanvas();
+            
+            // Force a render update
+            if (this.state !== 'playing') {
+                this.render();
+            }
+        }, 100);
     },
     
     handleInput() {
