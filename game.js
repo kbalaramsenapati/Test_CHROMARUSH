@@ -128,6 +128,11 @@ const Game = {
     
     animationId: null,
     
+    // Responsive settings
+    canvasScale: { x: 1, y: 1, displayWidth: 800, displayHeight: 600 },
+    fontSize: { hud: 40, menu: 60, gameOver: 60 },
+    mobileMode: false,
+    
     // Settings
     soundEnabled: true,
     
@@ -139,8 +144,16 @@ const Game = {
         const saved = localStorage.getItem('chromaRushHighScore');
         if (saved) this.highScore = parseInt(saved);
         
+        // Set up responsive canvas
+        this.setupResponsiveCanvas();
+        
         // Event listeners
         this.canvas.addEventListener('click', () => this.handleInput());
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.handleInput();
+        }, { passive: false });
+        
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space' || e.key === ' ') {
                 e.preventDefault();
@@ -148,36 +161,89 @@ const Game = {
             }
         });
         
-        // Touch support
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.handleInput();
+        // Handle orientation and resize
+        window.addEventListener('resize', () => this.handleResize());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.handleResize(), 100);
         });
-        
-        // Responsive canvas
-        this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
         
         console.log('Game initialized');
     },
     
-    resizeCanvas() {
-        const container = document.getElementById('gameContainer');
-        const maxWidth = Math.min(window.innerWidth, 800);
-        const maxHeight = Math.min(window.innerHeight * 0.8, 600);
+    setupResponsiveCanvas() {
+        // Get container dimensions
+        const container = document.getElementById('canvasContainer');
+        const rect = container.getBoundingClientRect();
         
-        // Maintain aspect ratio
-        const ratio = 800 / 600;
-        let width = maxWidth;
-        let height = maxWidth / ratio;
+        // Base dimensions
+        const baseWidth = 800;
+        const baseHeight = 600;
+        const aspectRatio = baseWidth / baseHeight;
         
-        if (height > maxHeight) {
-            height = maxHeight;
-            width = maxHeight * ratio;
+        // Calculate optimal canvas size
+        let canvasWidth = Math.min(rect.width, window.innerWidth);
+        let canvasHeight = canvasWidth / aspectRatio;
+        
+        // Check if height is too large
+        if (canvasHeight > rect.height) {
+            canvasHeight = rect.height;
+            canvasWidth = canvasHeight * aspectRatio;
         }
         
-        this.canvas.style.width = width + 'px';
-        this.canvas.style.height = height + 'px';
+        // Set canvas display size (CSS pixels)
+        this.canvas.style.width = canvasWidth + 'px';
+        this.canvas.style.height = canvasHeight + 'px';
+        
+        // Set actual canvas resolution (for crisp rendering)
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = baseWidth;
+        this.canvas.height = baseHeight;
+        
+        // Store scale factor for touch/click position calculation
+        this.canvasScale = {
+            x: baseWidth / canvasWidth,
+            y: baseHeight / canvasHeight,
+            displayWidth: canvasWidth,
+            displayHeight: canvasHeight
+        };
+        
+        // Adjust game elements based on screen size
+        this.adjustGameElements(canvasWidth, canvasHeight);
+        
+        console.log(`Canvas: ${canvasWidth}x${canvasHeight}, DPR: ${dpr}, Scale: ${this.canvasScale.x.toFixed(2)}`);
+    },
+    
+    adjustGameElements(displayWidth, displayHeight) {
+        // Adjust player size for smaller screens
+        const baseSize = 30;
+        const minScreenDim = Math.min(displayWidth, displayHeight);
+        
+        if (minScreenDim < 400) {
+            this.player.radius = 25;
+            this.fontSize = { hud: 30, menu: 40, gameOver: 50 };
+        } else if (minScreenDim < 600) {
+            this.player.radius = 28;
+            this.fontSize = { hud: 35, menu: 50, gameOver: 55 };
+        } else {
+            this.player.radius = 30;
+            this.fontSize = { hud: 40, menu: 60, gameOver: 60 };
+        }
+        
+        // Adjust gate spawn interval for mobile (slightly easier)
+        if (displayWidth < 600) {
+            this.mobileMode = true;
+        } else {
+            this.mobileMode = false;
+        }
+    },
+    
+    handleResize() {
+        this.setupResponsiveCanvas();
+        
+        // Force a render
+        if (this.state === 'menu' || this.state === 'gameOver') {
+            this.render();
+        }
     },
     
     handleInput() {
@@ -485,7 +551,7 @@ const Game = {
         const ctx = this.ctx;
         
         // Score
-        ctx.font = 'bold 40px Arial';
+        ctx.font = `bold ${this.fontSize.hud}px Arial`;
         ctx.fillStyle = '#FFFFFF';
         ctx.shadowColor = '#FFFFFF';
         ctx.shadowBlur = 10;
@@ -493,15 +559,18 @@ const Game = {
         
         // Multiplier
         if (this.multiplier > 1) {
-            ctx.font = 'bold 30px Arial';
+            ctx.font = `bold ${this.fontSize.hud * 0.75}px Arial`;
             ctx.fillStyle = '#FFE000';
-            ctx.fillText(`x${this.multiplier.toFixed(1)}`, 720, 50);
+            const multiplierX = this.mobileMode ? 750 : 720;
+            ctx.fillText(`x${this.multiplier.toFixed(1)}`, multiplierX, 50);
         }
         
         // Current color
-        ctx.font = 'bold 20px Arial';
+        ctx.font = `bold ${this.fontSize.hud * 0.5}px Arial`;
         ctx.fillStyle = this.colors[this.colorIndex];
-        ctx.fillText(this.colorNames[this.colorIndex], 350, 580);
+        ctx.textAlign = 'center';
+        ctx.fillText(this.colorNames[this.colorIndex], 400, 580);
+        ctx.textAlign = 'left';
         
         ctx.shadowBlur = 0;
     },
@@ -510,7 +579,7 @@ const Game = {
         const ctx = this.ctx;
         
         // Title
-        ctx.font = 'bold 60px Arial';
+        ctx.font = `bold ${this.fontSize.menu}px Arial`;
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         ctx.shadowColor = '#00F0FF';
@@ -518,10 +587,17 @@ const Game = {
         ctx.fillText('TAP TO START', 400, 300);
         
         // Subtitle
-        ctx.font = '20px Arial';
+        ctx.font = `${this.fontSize.menu * 0.35}px Arial`;
         ctx.fillStyle = '#AAAAAA';
         ctx.shadowBlur = 0;
         ctx.fillText('Match your color to the gates', 400, 340);
+        
+        // Mobile hint
+        if (this.mobileMode) {
+            ctx.font = `${this.fontSize.menu * 0.3}px Arial`;
+            ctx.fillStyle = '#666';
+            ctx.fillText('Tap anywhere to change color', 400, 380);
+        }
         
         ctx.textAlign = 'left';
     },
@@ -534,7 +610,7 @@ const Game = {
         ctx.fillRect(0, 0, 800, 600);
         
         // GAME OVER
-        ctx.font = 'bold 40px Arial';
+        ctx.font = `bold ${this.fontSize.gameOver * 0.7}px Arial`;
         ctx.fillStyle = '#FF0040';
         ctx.textAlign = 'center';
         ctx.shadowColor = '#FF0040';
@@ -542,19 +618,19 @@ const Game = {
         ctx.fillText('GAME OVER', 400, 200);
         
         // Score
-        ctx.font = 'bold 60px Arial';
+        ctx.font = `bold ${this.fontSize.gameOver}px Arial`;
         ctx.fillStyle = '#FFFFFF';
         ctx.shadowBlur = 10;
         ctx.fillText(this.score, 400, 280);
         
         // High score
-        ctx.font = '24px Arial';
+        ctx.font = `${this.fontSize.gameOver * 0.4}px Arial`;
         ctx.fillStyle = '#AAAAAA';
         ctx.shadowBlur = 0;
         ctx.fillText('High Score: ' + this.highScore, 400, 320);
         
         // Tap to retry
-        ctx.font = 'bold 30px Arial';
+        ctx.font = `bold ${this.fontSize.gameOver * 0.5}px Arial`;
         ctx.fillStyle = '#00F0FF';
         ctx.shadowColor = '#00F0FF';
         ctx.shadowBlur = 15;
@@ -583,13 +659,36 @@ window.addEventListener('load', async () => {
     // Initialize game
     Game.init();
     
+    // Update UI
+    const subtitle = document.getElementById('subtitle');
+    subtitle.innerHTML = 'Click or press SPACE to start';
+    
+    // Add instructions
+    const instructionsContainer = document.getElementById('instructions');
+    instructionsContainer.innerHTML = `
+        <h3>How to Play</h3>
+        <div class="instruction-grid">
+            <div class="instruction-box" style="border-color: #FF0040; background: rgba(255, 0, 64, 0.1);">
+                <h3 style="color: #FF0040;">1. CYCLE COLORS</h3>
+                <p>Click or press SPACE to switch between Red → Blue → Yellow</p>
+            </div>
+            <div class="instruction-box" style="border-color: #00F0FF; background: rgba(0, 240, 255, 0.1);">
+                <h3 style="color: #00F0FF;">2. MATCH GATES</h3>
+                <p>Your color must match the gate color to pass through</p>
+            </div>
+            <div class="instruction-box" style="border-color: #FFE000; background: rgba(255, 224, 0, 0.1);">
+                <h3 style="color: #FFE000;">3. BUILD COMBOS</h3>
+                <p>Match 5+ gates for 1.5x multiplier, 10+ for 2x!</p>
+            </div>
+        </div>
+    `;
+    
     // Start render loop
     Game.gameLoop();
     
     console.log('✅ Chroma Rush Ready!');
     
-    // Update subtitle based on platform
-    const subtitle = document.getElementById('subtitle');
+    // Platform indicator
     if (platform !== 'standalone') {
         subtitle.textContent = `Playing on ${platform} - Click to start`;
     }
